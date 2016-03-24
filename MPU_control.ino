@@ -1,9 +1,25 @@
 #include<Wire.h>
 #include<IRLib.h>
 
+
 boolean ContTv1 = true;
 boolean ContTv2 = true;
 boolean ContTv3 = true;
+
+// This variable keeps track of what mode the control is in
+// 0 is the default mode
+// 1 is tilted to the right
+// 2 is tilted to the left
+// More to be added later
+int CONTROL_MODE = 0;
+#define DEFAULT_MODE 0
+#define RIGHT 1
+#define LEFT 2
+
+// These numbers keep track of for how many counts the device has been tilted a certain direction.
+// This allows us to perform certain actions once the MPU has been tilted for a couple seconds, such
+// as change it's mode or send signals
+int rightTilt, leftTilt, forwardTilt, backTilt;
 
 IRsend My_Sender;
 
@@ -26,7 +42,7 @@ void setup(){
 }
 
 void loop(){
-  
+
   Wire.beginTransmission(MPU);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
@@ -45,28 +61,71 @@ void loop(){
   Serial.print(" | GyX = "); Serial.print(GyX);
   Serial.print(" | GyY = "); Serial.print(GyY);
   Serial.print(" | GyZ = "); Serial.println(GyZ);
-  delay(333);
+  //delay(333);
 
+  // We check if the device is tilted in various directions, and modify the tilt variables accordingly
+  if (AcY < -14000) {
+    rightTilt++;
+    leftTilt = 0;
+  }
+  if (AcY > 14000) {
+    leftTilt++;
+    rightTilt = 0;
+  }
+  if (AcY > -8000 && AcY < 8000) {
+    rightTilt = 0;
+    leftTilt = 0;
+    CONTROL_MODE = DEFAULT_MODE;
+    digitalWrite(13, false);
+    ContTv1 = false;
+    digitalWrite(12, false);
+    ContTv2 = false;
+  }
+  if (AcX < -14000) {
+    backTilt++;
+    forwardTilt = 0;
+  }
+  if (AcX > 14000) {
+    forwardTilt++;
+    backTilt = 0;
+  }
+  if (AcX > -8000 && AcX < 8000) {
+    forwardTilt = 0;
+    backTilt = 0;
+    // CONTROL_MODE = 0; probably dont have this here
+  }
 
-// Tap Down
-if (AcY < -6000 && AcZ < 15000) {
-  digitalWrite(13,ContTv1);
-  ContTv1 = !ContTv1;
-
-for (int i=0; i<20; i++)
-{
-    My_Sender.send(NECX, 0xE0E040BF, 32);
-    // Send IR signal
-}
-  //delay(1800); 
+  if (rightTilt > 10) {
+    CONTROL_MODE = RIGHT;
+    digitalWrite(13, true);
+    ContTv1 = true;
+  }
+  if (leftTilt > 10) {
+    CONTROL_MODE = LEFT;
+    digitalWrite(12, true);
+    ContTv2 = true;
   }
   
-//Tap Up
-  if (AcY > 8000 && AcZ < 15000) {
-  digitalWrite(12,ContTv2);
-  ContTv2 = !ContTv2;
-  delay(1800);
-  }
+
+  // Tap Down
+//  if (AcY < -6000) {
+//    digitalWrite(13,ContTv1);
+//    ContTv1 = !ContTv1;
+//
+//    for (int i=0; i<20; i++)
+//    {
+//      My_Sender.send(NECX, 0xE0E040BF, 32);
+//    // Send IR signal
+//    }
+//  //delay(1800); 
+//  }
+  
+//  //Tap Up
+//  if (AcY > 8000) {
+//    digitalWrite(12,ContTv2);
+//    ContTv2 = !ContTv2;
+//    delay(1800);
+//  }
   
 /*
   if (AcX < -15000 && AcY < 0 && AcZ < 1700) {
