@@ -1,5 +1,6 @@
 #include<Wire.h>
 #include<IRLib.h>
+#include<Time.h>
 
 
 boolean ContTv1 = true;
@@ -20,6 +21,15 @@ int CONTROL_MODE = 0;
 // This allows us to perform certain actions once the MPU has been tilted for a couple seconds, such
 // as change it's mode or send signals
 int rightTilt, leftTilt, forwardTilt, backTilt;
+
+// This integer keeps track of how much the user has shaken the MPU over the last 1 second. If the value
+// increaseses past a certain amount, action happen
+int32_t shake;
+
+// We use a timer to make more complex gestures
+int start;
+
+
 
 IRsend My_Sender;
 
@@ -42,6 +52,7 @@ void setup(){
 }
 
 void loop(){
+  int GyXshake;
 
   Wire.beginTransmission(MPU);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
@@ -76,10 +87,10 @@ void loop(){
     rightTilt = 0;
     leftTilt = 0;
     CONTROL_MODE = DEFAULT_MODE;
-    digitalWrite(13, false);
-    ContTv1 = false;
-    digitalWrite(12, false);
-    ContTv2 = false;
+//    digitalWrite(13, false);
+//    ContTv1 = false;
+//    digitalWrite(12, false);
+//    ContTv2 = false;
   }
   if (AcX < -14000) {
     backTilt++;
@@ -95,18 +106,44 @@ void loop(){
     // CONTROL_MODE = 0; probably dont have this here
   }
 
+  // Increment the shake variable
+  //if (GyX > 
+  if (shake > 0) {
+    shake = shake+abs(GyX)-10000;
+  } else {
+    shake = shake+abs(GyX);
+  }
+
   if (rightTilt > 10) {
     CONTROL_MODE = RIGHT;
-    digitalWrite(13, true);
-    ContTv1 = true;
   }
   if (leftTilt > 10) {
     CONTROL_MODE = LEFT;
-    digitalWrite(12, true);
-    ContTv2 = true;
+//    digitalWrite(12, true);
+//    ContTv2 = true;
+  }
+  //Serial.print("Checking conditions for light changing \n");
+  if (CONTROL_MODE == RIGHT && AcX > 7000 && (now()-start)> 1) {
+    //Serial.print("Turning the light on or off \n");
+    digitalWrite(13, !ContTv1);
+    ContTv1 = !ContTv1;
+    start = now();
+  }
+
+  if (CONTROL_MODE == RIGHT && AcX < -7000 && (now()-start)> 1) {
+    //Serial.print("Turning the light on or off \n");
+    digitalWrite(12, !ContTv2);
+    ContTv2 = !ContTv2;
+    start = now();
   }
   
-
+  if (shake > 100000) {
+    digitalWrite(13, !ContTv1);
+    ContTv1 = !ContTv1;
+    digitalWrite(12, !ContTv2);
+    ContTv2 = !ContTv2;
+    shake = 0;
+  }
   // Tap Down
 //  if (AcY < -6000) {
 //    digitalWrite(13,ContTv1);
@@ -134,4 +171,3 @@ void loop(){
   delay(1800);
   } */
 }
-
