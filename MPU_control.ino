@@ -103,9 +103,9 @@ void loop(){
 //  }
 //  Serial.print("\n");
 
-//  Serial.print("MODE IS ");
-//  Serial.print(CONTROL_MODE);
-//  Serial.print("\n");
+  Serial.print("MODE IS ");
+  Serial.print(CONTROL_MODE);
+  Serial.print("\n");
 
   // update the history variables
   for (int i = 29; i > 0; i--) {
